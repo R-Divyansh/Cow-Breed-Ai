@@ -1,4 +1,4 @@
 __pycache__/
 *.pyc
 cow_env/
-.env
+.env    
