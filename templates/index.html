@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cow Breed Classifier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0f0e0b;
+      --surface:   #1a1915;
+      --border:    #2e2d28;
+      --accent:    #c8a96e;
+      --accent2:   #7eb88a;
+      --danger:    #c06060;
+      --text:      #e8e4d9;
+      --muted:     #7a7870;
+      --card:      #211f1b;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--accent);
+      letter-spacing: -0.01em;
+    }
+    header span {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      min-height: calc(100vh - 65px);
+    }
+
+    /* ── Left panel (upload) ─────────────────────────────────────────────── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 1px dashed var(--border);
+      border-radius: 4px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      background: var(--surface);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: #1f1d18;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .drop-icon {
+      width: 40px; height: 40px; margin: 0 auto 1rem;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .drop-icon svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; }
+    .drop-zone p { font-size: 0.875rem; color: var(--text); margin-bottom: 0.25rem; }
+    .drop-zone small { font-size: 0.75rem; color: var(--muted); }
+
+    /* Thumbnails */
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 80px);
+      gap: 8px;
+    }
+    .thumb-wrap {
+      position: relative;
+      width: 80px; height: 80px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .thumb-wrap img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .thumb-remove {
+      position: absolute; top: 3px; right: 3px;
+      background: rgba(0,0,0,0.7);
+      border: none; color: #fff; cursor: pointer;
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      font-size: 10px; line-height: 18px; text-align: center;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .thumb-wrap .thumb-num {
+      position: absolute; bottom: 3px; left: 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 9px; color: rgba(255,255,255,0.7);
+    }
+
+    /* Info note */
+    .info-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Supported breeds tags */
+    .breed-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .breed-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* Analyse button */
+    .btn-analyse {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--accent);
+      color: #0f0e0b;
+      border: none;
+      border-radius: 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .btn-analyse:hover:not(:disabled) { opacity: 0.85; }
+    .btn-analyse:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+    /* Loading state */
+    .loading-bar {
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+    }
+    .loading-bar.active { display: block; }
+    .loading-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      animation: loadprogress 1.8s ease-in-out infinite;
+    }
+    @keyframes loadprogress {
+      0%   { width: 0%; margin-left: 0; }
+      50%  { width: 70%; margin-left: 15%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    /* ── Right panel (results) ───────────────────────────────────────────── */
+    .panel-right {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .empty-state .big-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 3.5rem;
+      color: var(--border);
+      line-height: 1;
+    }
+    .empty-state p { font-size: 0.85rem; }
+
+    /* Invalid result */
+    .invalid-card {
+      background: #1e1515;
+      border: 1px solid var(--danger);
+      border-radius: 6px;
+      padding: 1.5rem;
+    }
+    .invalid-card .invalid-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      color: var(--danger);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .invalid-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+    .invalid-conf {
+      margin-top: 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--danger);
+    }
+
+    /* Results layout: prediction + gradcam side by side */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    /* Prediction cards */
+    .pred-section .top-breed {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.2rem;
+      color: var(--accent);
+      line-height: 1.1;
+      margin-bottom: 0.25rem;
+    }
+    .pred-section .top-conf {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent2);
+      margin-bottom: 1.5rem;
+    }
+
+    .pred-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 0.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .pred-card.rank-1 { border-color: var(--accent); }
+    .pred-bar-bg {
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      opacity: 0.07;
+      transform-origin: left;
+      transform: scaleX(0);
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pred-card.rank-1 .pred-bar-bg { opacity: 0.12; }
+
+    .pred-top-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+      position: relative;
+    }
+    .pred-name {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    .pred-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--accent);
+    }
+    .pred-bar-track {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      position: relative;
+    }
+    .pred-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pred-card.rank-1 .pred-bar-fill { background: var(--accent); }
+    .pred-card.rank-2 .pred-bar-fill { background: var(--accent2); }
+    .pred-card.rank-3 .pred-bar-fill { background: var(--muted); }
+    .pred-card.rank-2 .pred-pct,
+    .pred-card.rank-3 .pred-pct { color: var(--muted); }
+
+    /* Grad-CAM section */
+    .gradcam-section {}
+    .gradcam-section .section-label { margin-bottom: 0.75rem; }
+    .gradcam-img-wrap {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .gradcam-img-wrap img {
+      width: 100%;
+      display: block;
+    }
+    .gradcam-legend {
+      padding: 0.75rem 1rem;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+    }
+    .gradcam-legend p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .gradcam-scale {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .scale-bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, #00008b, #0080ff, #00ff80, #ffff00, #ff0000);
+    }
+    .scale-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    /* Explanation panel */
+    .explanation-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.2rem 1.5rem;
+    }
+    .explanation-card h3 {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .explain-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      align-items: flex-start;
+    }
+    .explain-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      min-width: 22px;
+      padding-top: 2px;
+    }
+    .explain-text {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .explain-text strong { color: var(--text); font-weight: 500; }
+
+    /* Multi image note */
+    .multi-note {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .results-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Breed.AI</h1>
+  <span>Indian Cow Breed Classifier</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── LEFT PANEL ──────────────────────────────────────────────────────── -->
+  <div class="panel-left">
+
+    <div>
+      <div class="section-label">Upload images</div>
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept="image/*" multiple>
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+        </div>
+        <p>Drop images here or click to browse</p>
+        <small>Up to 5 images — results are averaged for accuracy</small>
+      </div>
+    </div>
+
+    <!-- Thumbnails -->
+    <div id="thumb-container" style="display:none;">
+      <div class="section-label">Selected images <span id="img-count" class="multi-note"></span></div>
+      <div class="thumb-grid" id="thumb-grid"></div>
+    </div>
+
+    <!-- Info -->
+    <div class="info-note">
+      <strong style="color:var(--text)">How it works:</strong> Upload one or more clear photos of a cow.
+      The model removes the background, enhances low-light features, then identifies the breed.
+      Multiple images are averaged together for a more reliable result.
+    </div>
+
+    <!-- Breeds -->
+    <div>
+      <div class="section-label">Supported breeds</div>
+      <div class="breed-tags" id="breed-tags"></div>
+    </div>
+
+    <!-- Analyse button -->
+    <div style="margin-top:auto; display:flex; flex-direction:column; gap:0.75rem;">
+      <div class="loading-bar" id="loading-bar"><div class="loading-fill"></div></div>
+      <button class="btn-analyse" id="analyse-btn" disabled>Analyse</button>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT PANEL ─────────────────────────────────────────────────────── -->
+  <div class="panel-right" id="panel-right">
+
+    <div class="empty-state" id="empty-state">
+      <div class="big-text">?</div>
+      <p>Upload one or more cow images<br>to identify the breed</p>
+    </div>
+
+    <!-- Invalid image card (hidden by default) -->
+    <div class="invalid-card" id="invalid-card" style="display:none;">
+      <div class="invalid-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+        </svg>
+        Not a valid input
+      </div>
+      <p id="invalid-reason"></p>
+      <div class="invalid-conf" id="invalid-conf"></div>
+    </div>
+
+    <!-- Results (hidden by default) -->
+    <div id="results-container" style="display:none; flex-direction:column; gap:1.5rem;">
+
+      <div class="results-grid">
+
+        <!-- Predictions -->
+        <div class="pred-section">
+          <div class="section-label">Predicted breed</div>
+          <div class="top-breed" id="top-breed-name"></div>
+          <div class="top-conf" id="top-conf-text"></div>
+          <div id="pred-cards"></div>
+          <div class="multi-note" id="multi-note" style="margin-top:0.5rem;"></div>
+        </div>
+
+        <!-- Grad-CAM -->
+        <div class="gradcam-section">
+          <div class="section-label">What the model focused on</div>
+          <div class="gradcam-img-wrap" id="gradcam-wrap" style="display:none;">
+            <img id="gradcam-img" src="" alt="Grad-CAM heatmap">
+            <div class="gradcam-legend">
+              <div class="gradcam-scale">
+                <span class="scale-label">Low</span>
+                <div class="scale-bar"></div>
+                <span class="scale-label">High</span>
+              </div>
+              <p style="margin-top:0.4rem;">
+                Warmer colours (red/yellow) = regions the Swin Transformer
+                weighted most heavily in its decision.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Explanation -->
+      <div class="explanation-card">
+        <h3>Why this prediction?</h3>
+        <div class="explain-row">
+          <span class="explain-num">01</span>
+          <span class="explain-text">
+            <strong>Background removed</strong> — the U-Net isolated the cow from the background
+            so the classifier focuses on body shape and coat, not the environment.
+          </span>
+        </div>
+        <div class="explain-row">
+          <span class="explain-num">02</span>
+          <span class="explain-text">
+            <strong>Low-light enhanced</strong> — FeatEnHancer boosted task-relevant features
+            (horn shape, dewlap, coat texture) even in dark or shadowed images.
+          </span>
+        </div>
+        <div class="explain-row">
+          <span class="explain-num">03</span>
+          <span class="explain-text">
+            <strong>Swin Transformer</strong> — a hierarchical vision transformer that processes
+            the image in shifted windows, attending to local and global features simultaneously.
+            The heatmap above shows which patches carried the most weight.
+          </span>
+        </div>
+        <div class="explain-row" id="multi-explain-row" style="display:none;">
+          <span class="explain-num">04</span>
+          <span class="explain-text" id="multi-explain-text"></span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const selectedFiles = [];
+  const MAX_FILES = 5;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const dropZone      = document.getElementById('drop-zone');
+  const fileInput     = document.getElementById('file-input');
+  const thumbContainer= document.getElementById('thumb-container');
+  const thumbGrid     = document.getElementById('thumb-grid');
+  const imgCount      = document.getElementById('img-count');
+  const analyseBtn    = document.getElementById('analyse-btn');
+  const loadingBar    = document.getElementById('loading-bar');
+  const emptyState    = document.getElementById('empty-state');
+  const invalidCard   = document.getElementById('invalid-card');
+  const invalidReason = document.getElementById('invalid-reason');
+  const invalidConf   = document.getElementById('invalid-conf');
+  const resultsContainer = document.getElementById('results-container');
+  const topBreedName  = document.getElementById('top-breed-name');
+  const topConfText   = document.getElementById('top-conf-text');
+  const predCards     = document.getElementById('pred-cards');
+  const gradcamWrap   = document.getElementById('gradcam-wrap');
+  const gradcamImg    = document.getElementById('gradcam-img');
+  const multiNote     = document.getElementById('multi-note');
+  const multiExplainRow = document.getElementById('multi-explain-row');
+  const multiExplainText= document.getElementById('multi-explain-text');
+  const breedTagsEl   = document.getElementById('breed-tags');
+
+  // ── Populate breed tags from Flask template ────────────────────────────────
+  const BREEDS = {{ classes | tojson }};
+  BREEDS.forEach(b => {
+    const tag = document.createElement('span');
+    tag.className = 'breed-tag';
+    tag.textContent = b;
+    breedTagsEl.appendChild(tag);
+  });
+
+  // ── File handling ──────────────────────────────────────────────────────────
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    addFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+
+  function addFiles(fileList) {
+    for (const f of fileList) {
+      if (selectedFiles.length >= MAX_FILES) break;
+      if (!f.type.startsWith('image/')) continue;
+      selectedFiles.push(f);
+    }
+    renderThumbs();
+  }
+
+  function removeFile(i) {
+    selectedFiles.splice(i, 1);
+    renderThumbs();
+  }
+
+  function renderThumbs() {
+    thumbGrid.innerHTML = '';
+    if (selectedFiles.length === 0) {
+      thumbContainer.style.display = 'none';
+      analyseBtn.disabled = true;
+      return;
+    }
+    thumbContainer.style.display = 'block';
+    analyseBtn.disabled = false;
+    imgCount.textContent = `(${selectedFiles.length}/${MAX_FILES})`;
+
+    selectedFiles.forEach((f, i) => {
+      const wrap  = document.createElement('div');
+      wrap.className = 'thumb-wrap';
+
+      const img   = document.createElement('img');
+      img.src     = URL.createObjectURL(f);
+
+      const btn   = document.createElement('button');
+      btn.className = 'thumb-remove';
+      btn.textContent = '×';
+      btn.onclick = (e) => { e.stopPropagation(); removeFile(i); };
+
+      const num   = document.createElement('span');
+      num.className = 'thumb-num';
+      num.textContent = `#${i+1}`;
+
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      wrap.appendChild(num);
+      thumbGrid.appendChild(wrap);
+    });
+  }
+
+  // ── Analyse ────────────────────────────────────────────────────────────────
+  analyseBtn.addEventListener('click', async () => {
+    if (selectedFiles.length === 0) return;
+
+    // Reset UI
+    emptyState.style.display      = 'none';
+    invalidCard.style.display     = 'none';
+    resultsContainer.style.display= 'none';
+    loadingBar.classList.add('active');
+    analyseBtn.disabled           = true;
+
+    const formData = new FormData();
+    selectedFiles.forEach(f => formData.append('images', f));
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
+      if (!data.valid) {
+        // ── Invalid image ──────────────────────────────────────────────────
+        invalidReason.textContent = data.reason;
+        invalidConf.textContent   = `Peak confidence: ${data.max_confidence}%  |  Threshold: 60%`;
+        invalidCard.style.display = 'block';
+
+      } else {
+        // ── Valid result ───────────────────────────────────────────────────
+        topBreedName.textContent = data.top_breed;
+        topConfText.textContent  = `${data.top_conf}% confidence`;
+
+        // Render prediction bars
+        predCards.innerHTML = '';
+        data.predictions.forEach(p => {
+          const card = document.createElement('div');
+          card.className = `pred-card rank-${p.rank}`;
+          card.innerHTML = `
+            <div class="pred-bar-bg" style="transform:scaleX(${p.confidence/100})"></div>
+            <div class="pred-top-row">
+              <span class="pred-name">${p.breed}</span>
+              <span class="pred-pct">${p.confidence}%</span>
+            </div>
+            <div class="pred-bar-track">
+              <div class="pred-bar-fill" data-width="${p.confidence}"></div>
+            </div>`;
+          predCards.appendChild(card);
+        });
+
+        // Animate bars after paint
+        requestAnimationFrame(() => {
+          document.querySelectorAll('.pred-bar-fill').forEach(el => {
+            el.style.width = el.dataset.width + '%';
+          });
+        });
+
+        // Grad-CAM
+        if (data.gradcam) {
+          gradcamImg.src          = data.gradcam;
+          gradcamWrap.style.display = 'block';
+        } else {
+          gradcamWrap.style.display = 'none';
+        }
+
+        // Multi-image note
+        if (data.num_images > 1) {
+          multiNote.textContent = `Result averaged across ${data.num_images} images`;
+          multiExplainRow.style.display = 'flex';
+          multiExplainText.innerHTML =
+            `<strong>Multi-image averaging</strong> — probabilities from all ${data.num_images} uploaded images 
+             were averaged before the final prediction, reducing the effect of 
+             angle, lighting, or occlusion in any single photo.`;
+        } else {
+          multiNote.textContent = '';
+          multiExplainRow.style.display = 'none';
+        }
+
+        resultsContainer.style.display = 'flex';
+      }
+
+    } catch (err) {
+      invalidReason.textContent = 'Server error: ' + err.message;
+      invalidConf.textContent   = '';
+      invalidCard.style.display = 'block';
+    } finally {
+      loadingBar.classList.remove('active');
+      analyseBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
